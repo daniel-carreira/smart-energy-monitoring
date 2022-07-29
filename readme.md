@@ -4,7 +4,17 @@ Home-IoT ecosystem that can automatically identify abnormal events in the routin
 
 ## Architecture
 
-![Architecture Image](/docs/architecture.jpg?raw=true "Project Architecture")
+![Project Architecture Image](/docs/architecture.jpg?raw=true "Project Architecture")
+
+## SEMD
+
+SEMD or Smart Energy Monitoring Device, it is the equipment used to read the energy consumption in the home. To install it, you need to attach sensor to the main conductor of your home.
+
+**SEMD**
+![SEMD Image](/docs/semd.jpg?raw=true "SEMD")
+
+**SEMD Connection**
+![SEMD Connection Image](/docs/semd_connection.jpg?raw=true "SEMD Connection")
 
 ## Usage
 
