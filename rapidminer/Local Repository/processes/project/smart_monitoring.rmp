@@ -1,0 +1,697 @@
+<?xml version="1.0" encoding="UTF-8"?><process version="9.10.007">
+  <context>
+    <input/>
+    <output/>
+    <macros/>
+  </context>
+  <operator activated="true" class="process" compatibility="9.10.007" expanded="true" name="Process">
+    <parameter key="logverbosity" value="init"/>
+    <parameter key="random_seed" value="2001"/>
+    <parameter key="send_mail" value="never"/>
+    <parameter key="notification_email" value=""/>
+    <parameter key="process_duration_for_mail" value="30"/>
+    <parameter key="encoding" value="SYSTEM"/>
+    <process expanded="true">
+      <operator activated="true" class="jdbc_connectors:read_database" compatibility="9.10.007" expanded="true" height="82" name="Consumptions" width="90" x="112" y="136">
+        <parameter key="define_connection" value="repository"/>
+        <parameter key="connection_entry" value="/Connections/DB"/>
+        <parameter key="database_system" value="MySQL"/>
+        <parameter key="define_query" value="query"/>
+        <parameter key="query" value="SELECT id AS consumption_id, value, created_at, user_id, variance&#10;FROM consumptions&#10;WHERE deleted_at IS NULL&#10;AND observation_id IS NULL&#10;ORDER BY id DESC&#10;LIMIT 1"/>
+        <parameter key="use_default_schema" value="true"/>
+        <parameter key="prepare_statement" value="false"/>
+        <enumeration key="parameters"/>
+        <parameter key="datamanagement" value="double_array"/>
+        <parameter key="data_management" value="auto"/>
+      </operator>
+      <operator activated="true" class="date_to_nominal" compatibility="9.10.007" expanded="true" height="82" name="Date to Nominal" width="90" x="246" y="136">
+        <parameter key="attribute_name" value="created_at"/>
+        <parameter key="date_format" value="F HH:mm DDD"/>
+        <parameter key="time_zone" value="SYSTEM"/>
+        <parameter key="locale" value="Portuguese (Portugal)"/>
+        <parameter key="keep_old_attribute" value="false"/>
+      </operator>
+      <operator activated="true" class="generate_attributes" compatibility="9.10.007" expanded="true" height="82" name="Generate Attributes" width="90" x="380" y="136">
+        <list key="function_descriptions">
+          <parameter key="time" value="parse(cut(created_at, 2, 2)) + (parse(cut(created_at, 5, 2)) / 60)"/>
+          <parameter key="consumption" value="value"/>
+          <parameter key="user_id" value="user_id"/>
+          <parameter key="consumption_id" value="consumption_id"/>
+          <parameter key="weekend" value="if (parse(cut(created_at, 0, 1)) == 0 || parse(cut(created_at, 0, 1)) == 6, &quot;Yes&quot;, &quot;No&quot;)"/>
+          <parameter key="day_week" value="if (parse(cut(created_at, 0, 1)) == 0, &quot;Sunday&quot;, if (parse(cut(created_at, 0, 1)) == 1, &quot;Monday&quot;, if (parse(cut(created_at, 0, 1)) == 2, &quot;Tuesday&quot;, if (parse(cut(created_at, 0, 1)) == 3, &quot;Wednesday&quot;, if (parse(cut(created_at, 0, 1)) == 4, &quot;Thursday&quot;, if (parse(cut(created_at, 0, 1)) == 5, &quot;Friday&quot;, &quot;Saturday&quot;))))))"/>
+          <parameter key="season" value="if (parse(cut(created_at, 8, 3)) &lt; 79, &quot;Winter&quot;, if (parse(cut(created_at, 8, 3)) &lt; 172, &quot;Spring&quot;, if (parse(cut(created_at, 8, 3)) &lt; 266, &quot;Summer&quot;, if (parse(cut(created_at, 8, 3)) &lt; 355, &quot;Autumn&quot;, &quot;Winter&quot;))))"/>
+          <parameter key="consumption_variance" value="variance"/>
+        </list>
+        <parameter key="keep_all" value="false"/>
+      </operator>
+      <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Count Consumptions" width="90" x="581" y="136">
+        <parameter key="macro" value="i"/>
+        <parameter key="macro_type" value="number_of_examples"/>
+        <parameter key="statistics" value="average"/>
+        <parameter key="attribute_name" value=""/>
+        <list key="additional_macros"/>
+      </operator>
+      <operator activated="true" class="branch" compatibility="9.10.007" expanded="true" height="166" name="IF ROWS &gt; 0" width="90" x="849" y="85">
+        <parameter key="condition_type" value="expression"/>
+        <parameter key="expression" value="eval(%{i}) &gt; 0"/>
+        <parameter key="io_object" value="ANOVAMatrix"/>
+        <parameter key="return_inner_output" value="true"/>
+        <process expanded="true">
+          <operator activated="true" class="subprocess" compatibility="9.10.007" expanded="true" height="82" name="Authentication" width="90" x="246" y="238">
+            <process expanded="true">
+              <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="Credentials" width="90" x="45" y="34">
+                <parameter key="generator_type" value="attribute functions"/>
+                <parameter key="number_of_examples" value="1"/>
+                <parameter key="use_stepsize" value="false"/>
+                <list key="function_descriptions">
+                  <parameter key="username" value="&quot;rapidminer@ai.pt&quot;"/>
+                  <parameter key="password" value="&quot;12345&quot;"/>
+                </list>
+                <parameter key="add_id_attribute" value="false"/>
+                <list key="numeric_series_configuration"/>
+                <list key="date_series_configuration"/>
+                <list key="date_series_configuration (interval)"/>
+                <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                <parameter key="time_zone" value="SYSTEM"/>
+                <parameter key="column_separator" value=","/>
+                <parameter key="parse_all_as_nominal" value="false"/>
+                <parameter key="decimal_point_character" value="."/>
+                <parameter key="trim_attribute_names" value="true"/>
+              </operator>
+              <operator activated="true" class="set_macro" compatibility="9.10.007" expanded="true" height="68" name="URL" width="90" x="45" y="136">
+                <parameter key="macro" value="url"/>
+                <parameter key="value" value="http://backend.test/api"/>
+              </operator>
+              <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Extract Macro" width="90" x="246" y="34">
+                <parameter key="macro" value="username"/>
+                <parameter key="macro_type" value="data_value"/>
+                <parameter key="statistics" value="average"/>
+                <parameter key="attribute_name" value="username"/>
+                <parameter key="example_index" value="1"/>
+                <list key="additional_macros">
+                  <parameter key="password" value="password"/>
+                </list>
+              </operator>
+              <operator activated="true" class="branch" compatibility="9.10.007" expanded="true" height="103" name="IF HAS CREDENTIALS" width="90" x="514" y="34">
+                <parameter key="condition_type" value="expression"/>
+                <parameter key="expression" value="%{username} != &quot;&quot; &amp;&amp; %{password} != &quot;&quot;"/>
+                <parameter key="io_object" value="ANOVAMatrix"/>
+                <parameter key="return_inner_output" value="true"/>
+                <process expanded="true">
+                  <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="Token" width="90" x="112" y="85">
+                    <parameter key="generator_type" value="attribute functions"/>
+                    <parameter key="number_of_examples" value="1"/>
+                    <parameter key="use_stepsize" value="false"/>
+                    <list key="function_descriptions">
+                      <parameter key="access_token" value="&quot;&quot;"/>
+                      <parameter key="refresh_token" value="&quot;&quot;"/>
+                      <parameter key="expired_in" value="0"/>
+                    </list>
+                    <parameter key="add_id_attribute" value="false"/>
+                    <list key="numeric_series_configuration"/>
+                    <list key="date_series_configuration"/>
+                    <list key="date_series_configuration (interval)"/>
+                    <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="column_separator" value=","/>
+                    <parameter key="parse_all_as_nominal" value="false"/>
+                    <parameter key="decimal_point_character" value="."/>
+                    <parameter key="trim_attribute_names" value="true"/>
+                  </operator>
+                  <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="Response Login" width="90" x="112" y="187">
+                    <parameter key="generator_type" value="attribute functions"/>
+                    <parameter key="number_of_examples" value="1"/>
+                    <parameter key="use_stepsize" value="false"/>
+                    <list key="function_descriptions">
+                      <parameter key="url" value="&quot;&quot;"/>
+                      <parameter key="body" value="&quot;&quot;"/>
+                      <parameter key="code" value="&quot;&quot;"/>
+                      <parameter key="response" value="&quot;&quot;"/>
+                    </list>
+                    <parameter key="add_id_attribute" value="false"/>
+                    <list key="numeric_series_configuration"/>
+                    <list key="date_series_configuration"/>
+                    <list key="date_series_configuration (interval)"/>
+                    <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="column_separator" value=","/>
+                    <parameter key="parse_all_as_nominal" value="false"/>
+                    <parameter key="decimal_point_character" value="."/>
+                    <parameter key="trim_attribute_names" value="true"/>
+                  </operator>
+                  <operator activated="true" class="execute_script" compatibility="9.10.007" expanded="true" height="124" name="Login" width="90" x="313" y="34">
+                    <parameter key="script" value="token = input[1]&#10;credentials = input[0].getExample(0)&#10;response = input[2]&#10;&#10;def extractToken(responseString) {&#10;&#9;array = responseString.split(',')&#10;&#10;&#9;if (array.size() &lt; 4) return&#10;&#10;&#9;tokenType = array[0].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;expiresIn = array[1].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;accessToken = array[2].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;refreshToken = array[3].split(':')[1].replaceAll(/ |&quot;|}/, '')&#10;&#10;&#9;values = new ArrayList()&#10;&#9;values.add(accessToken)&#10;&#9;values.add(refreshToken)&#10;&#9;values.add(expiresIn)&#10;&#10;&#9;return values&#10;}&#10;url = &quot;%{url}/login&quot;&#10;post = new URL(url).openConnection();&#10;message = '{&quot;username&quot;:&quot;' + credentials[&quot;username&quot;] + '&quot;,&quot;password&quot;:&quot;' + credentials[&quot;password&quot;] + '&quot;}'&#10;response.getExample(0)['url'] = url&#10;response.getExample(0)['body'] = message&#10;&#10;post.setRequestMethod(&quot;POST&quot;)&#10;post.setDoOutput(true)&#10;post.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)&#10;post.getOutputStream().write(message.getBytes(&quot;UTF-8&quot;))&#10;&#10;try {&#10;&#9;response.getExample(0)['code'] = post.getResponseCode();&#10;&#9;response.getExample(0)['response'] = post.getInputStream().getText().replaceAll(&quot;\n&quot;, &quot;&quot;);&#10;&#10;&#9;newTokens = extractToken(response.getExample(0)['response'])&#10;&#9;token.getExample(0)[&quot;access_token&quot;] = newTokens.get(0)&#10;&#9;token.getExample(0)[&quot;refresh_token&quot;] = newTokens.get(1)&#10;&#9;token.getExample(0)[&quot;expired_in&quot;] = System.currentTimeMillis() + newTokens.get(2).toInteger()&#10;}&#10;catch (e) {&#10;&#9;response.getExample(0)['code'] = 500&#10;&#9;response.getExample(0)['response'] = e.getMessage()&#10;}&#10;&#10;returnValues = new ArrayList()&#10;returnValues.add(response)&#10;returnValues.add(token)&#10;&#10;return returnValues"/>
+                    <parameter key="standard_imports" value="true"/>
+                  </operator>
+                  <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Extract Macro Error" width="90" x="447" y="136">
+                    <parameter key="macro" value="login_code"/>
+                    <parameter key="macro_type" value="data_value"/>
+                    <parameter key="statistics" value="average"/>
+                    <parameter key="attribute_name" value="code"/>
+                    <parameter key="example_index" value="1"/>
+                    <list key="additional_macros"/>
+                  </operator>
+                  <operator activated="true" class="branch" compatibility="9.10.007" expanded="true" height="82" name="STOP" width="90" x="246" y="442">
+                    <parameter key="condition_type" value="expression"/>
+                    <parameter key="expression" value="%{login_code} == 500"/>
+                    <parameter key="io_object" value="ANOVAMatrix"/>
+                    <parameter key="return_inner_output" value="true"/>
+                    <process expanded="true">
+                      <operator activated="true" class="throw_exception" compatibility="9.10.007" expanded="true" height="68" name="Throw Exception Login (2)" width="90" x="246" y="34">
+                        <parameter key="message" value="Error when trying to login"/>
+                      </operator>
+                      <portSpacing port="source_condition" spacing="0"/>
+                      <portSpacing port="source_input 1" spacing="0"/>
+                      <portSpacing port="sink_input 1" spacing="0"/>
+                    </process>
+                    <process expanded="true">
+                      <portSpacing port="source_condition" spacing="0"/>
+                      <portSpacing port="source_input 1" spacing="0"/>
+                      <portSpacing port="sink_input 1" spacing="0"/>
+                    </process>
+                  </operator>
+                  <connect from_port="condition" to_op="Login" to_port="input 1"/>
+                  <connect from_op="Token" from_port="output" to_op="Login" to_port="input 2"/>
+                  <connect from_op="Response Login" from_port="output" to_op="Login" to_port="input 3"/>
+                  <connect from_op="Login" from_port="output 1" to_op="Extract Macro Error" to_port="example set"/>
+                  <connect from_op="Login" from_port="output 2" to_port="input 2"/>
+                  <connect from_op="Extract Macro Error" from_port="example set" to_port="input 1"/>
+                  <portSpacing port="source_condition" spacing="0"/>
+                  <portSpacing port="source_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 2" spacing="0"/>
+                  <portSpacing port="sink_input 3" spacing="0"/>
+                  <description align="center" color="blue" colored="true" height="151" resized="true" width="216" x="182" y="393">STOP Execution IF authentication FAIL</description>
+                </process>
+                <process expanded="true">
+                  <operator activated="true" class="read_csv" compatibility="9.10.007" expanded="true" height="68" name="Read Tokens" width="90" x="112" y="34">
+                    <parameter key="csv_file" value="C:\Users\NOPLEX\Documents\GitHub\Bolsa\RapidMiner\Local Repository\data\tokens.csv"/>
+                    <parameter key="column_separators" value=";"/>
+                    <parameter key="trim_lines" value="false"/>
+                    <parameter key="use_quotes" value="true"/>
+                    <parameter key="quotes_character" value="&quot;"/>
+                    <parameter key="escape_character" value="\"/>
+                    <parameter key="skip_comments" value="true"/>
+                    <parameter key="comment_characters" value="#"/>
+                    <parameter key="starting_row" value="1"/>
+                    <parameter key="parse_numbers" value="true"/>
+                    <parameter key="decimal_character" value="."/>
+                    <parameter key="grouped_digits" value="false"/>
+                    <parameter key="grouping_character" value=","/>
+                    <parameter key="infinity_representation" value=""/>
+                    <parameter key="date_format" value=""/>
+                    <parameter key="first_row_as_names" value="true"/>
+                    <list key="annotations"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="locale" value="English (United States)"/>
+                    <parameter key="encoding" value="windows-1252"/>
+                    <parameter key="read_all_values_as_polynominal" value="false"/>
+                    <list key="data_set_meta_data_information">
+                      <parameter key="0" value="access_token.true.polynominal.attribute"/>
+                      <parameter key="1" value="refresh_token.true.polynominal.attribute"/>
+                      <parameter key="2" value="expired_in.true.real.attribute"/>
+                    </list>
+                    <parameter key="read_not_matching_values_as_missings" value="false"/>
+                  </operator>
+                  <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="Response Refresh" width="90" x="112" y="136">
+                    <parameter key="generator_type" value="attribute functions"/>
+                    <parameter key="number_of_examples" value="1"/>
+                    <parameter key="use_stepsize" value="false"/>
+                    <list key="function_descriptions">
+                      <parameter key="url" value="&quot;&quot;"/>
+                      <parameter key="body" value="&quot;&quot;"/>
+                      <parameter key="code" value="&quot;&quot;"/>
+                      <parameter key="response" value="&quot;&quot;"/>
+                    </list>
+                    <parameter key="add_id_attribute" value="false"/>
+                    <list key="numeric_series_configuration"/>
+                    <list key="date_series_configuration"/>
+                    <list key="date_series_configuration (interval)"/>
+                    <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="column_separator" value=","/>
+                    <parameter key="parse_all_as_nominal" value="false"/>
+                    <parameter key="decimal_point_character" value="."/>
+                    <parameter key="trim_attribute_names" value="true"/>
+                  </operator>
+                  <operator activated="true" class="execute_script" compatibility="9.10.007" expanded="true" height="103" name="Refresh" width="90" x="313" y="34">
+                    <parameter key="script" value="token = input[0]&#10;response = input[1]&#10;&#10;returnValues = new ArrayList()&#10;returnValues.add(response)&#10;returnValues.add(token)&#10;&#10;if (token.getExample(0)[&quot;expired_in&quot;] &gt; System.currentTimeMillis() + 60000) {&#10;&#9;return returnValues&#10;}&#10;&#10;def extractToken(responseString) {&#10;&#9;array = responseString.split(',')&#10;&#10;&#9;if (array.size() &lt; 4) return&#10;&#10;&#9;tokenType = array[0].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;expiresIn = array[1].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;accessToken = array[2].split(':')[1].replaceAll(/ |&quot;/, '')&#10;&#9;refreshToken = array[3].split(':')[1].replaceAll(/ |&quot;|}/, '')&#10;&#10;&#9;values = new ArrayList()&#10;&#9;values.add(accessToken)&#10;&#9;values.add(refreshToken)&#10;&#9;values.add(expiresIn)&#10;&#10;&#9;return values&#10;}&#10;&#10;url = &quot;%{url}/refresh&quot;&#10;post = new URL(url).openConnection();&#10;message = '{&quot;refresh_token&quot;:&quot;' + token.getExample(0)[&quot;refresh_token&quot;] + '&quot;}'&#10;response.getExample(0)['url'] = url&#10;response.getExample(0)['body'] = message&#10;&#10;post.setRequestMethod(&quot;POST&quot;)&#10;post.setDoOutput(true)&#10;post.setRequestProperty(&quot;Content-Type&quot;, &quot;application/json&quot;)&#10;post.getOutputStream().write(message.getBytes(&quot;UTF-8&quot;))&#10;&#10;try {&#10;&#9;response.getExample(0)['code'] = post.getResponseCode();&#10;&#9;response.getExample(0)['response'] = post.getInputStream().getText().replaceAll(&quot;\n&quot;, &quot;&quot;);&#10;&#10;&#9;newTokens = extractToken(response.getExample(0)['response'])&#10;&#9;token.getExample(0)[&quot;access_token&quot;] = newTokens.get(0)&#10;&#9;token.getExample(0)[&quot;refresh_token&quot;] = newTokens.get(1)&#10;&#9;token.getExample(0)[&quot;expired_in&quot;] = System.currentTimeMillis() + newTokens.get(2).toInteger()&#10;}&#10;catch (e) {&#10;&#9;response.getExample(0)['code'] = 500&#10;&#9;response.getExample(0)['response'] = e.getMessage()&#10;}&#10;&#10;return returnValues"/>
+                    <parameter key="standard_imports" value="true"/>
+                  </operator>
+                  <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Extract Macro Error (2)" width="90" x="447" y="136">
+                    <parameter key="macro" value="refresh_code"/>
+                    <parameter key="macro_type" value="data_value"/>
+                    <parameter key="statistics" value="average"/>
+                    <parameter key="attribute_name" value="code"/>
+                    <parameter key="example_index" value="1"/>
+                    <list key="additional_macros"/>
+                  </operator>
+                  <operator activated="true" class="branch" compatibility="9.10.007" expanded="true" height="82" name="STOP (2)" width="90" x="246" y="442">
+                    <parameter key="condition_type" value="expression"/>
+                    <parameter key="expression" value="%{refresh_code} == 500"/>
+                    <parameter key="io_object" value="ANOVAMatrix"/>
+                    <parameter key="return_inner_output" value="true"/>
+                    <process expanded="true">
+                      <operator activated="true" class="throw_exception" compatibility="9.10.007" expanded="true" height="68" name="Throw Exception Refresh" width="90" x="246" y="34">
+                        <parameter key="message" value="Error when trying to refresh the token"/>
+                      </operator>
+                      <portSpacing port="source_condition" spacing="0"/>
+                      <portSpacing port="source_input 1" spacing="0"/>
+                      <portSpacing port="sink_input 1" spacing="0"/>
+                    </process>
+                    <process expanded="true">
+                      <portSpacing port="source_condition" spacing="0"/>
+                      <portSpacing port="source_input 1" spacing="0"/>
+                      <portSpacing port="sink_input 1" spacing="0"/>
+                    </process>
+                  </operator>
+                  <connect from_op="Read Tokens" from_port="output" to_op="Refresh" to_port="input 1"/>
+                  <connect from_op="Response Refresh" from_port="output" to_op="Refresh" to_port="input 2"/>
+                  <connect from_op="Refresh" from_port="output 1" to_op="Extract Macro Error (2)" to_port="example set"/>
+                  <connect from_op="Refresh" from_port="output 2" to_port="input 2"/>
+                  <connect from_op="Extract Macro Error (2)" from_port="example set" to_port="input 1"/>
+                  <portSpacing port="source_condition" spacing="0"/>
+                  <portSpacing port="source_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 2" spacing="0"/>
+                  <portSpacing port="sink_input 3" spacing="0"/>
+                  <description align="center" color="blue" colored="true" height="152" resized="true" width="216" x="179" y="393">STOP Execution IF authentication FAIL</description>
+                </process>
+              </operator>
+              <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Token Macro" width="90" x="715" y="136">
+                <parameter key="macro" value="token"/>
+                <parameter key="macro_type" value="data_value"/>
+                <parameter key="statistics" value="average"/>
+                <parameter key="attribute_name" value="access_token"/>
+                <parameter key="example_index" value="1"/>
+                <list key="additional_macros"/>
+              </operator>
+              <operator activated="true" class="write_csv" compatibility="9.10.007" expanded="true" height="82" name="Write Tokens" width="90" x="916" y="136">
+                <parameter key="csv_file" value="D:/GitRepository/SEM/Rapidminer/Local Repository/data/tokens.csv"/>
+                <parameter key="column_separator" value=";"/>
+                <parameter key="write_attribute_names" value="true"/>
+                <parameter key="quote_nominal_values" value="true"/>
+                <parameter key="format_date_attributes" value="true"/>
+                <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                <parameter key="append_to_file" value="false"/>
+                <parameter key="encoding" value="SYSTEM"/>
+              </operator>
+              <connect from_op="Credentials" from_port="output" to_op="Extract Macro" to_port="example set"/>
+              <connect from_op="Extract Macro" from_port="example set" to_op="IF HAS CREDENTIALS" to_port="condition"/>
+              <connect from_op="IF HAS CREDENTIALS" from_port="input 1" to_port="out 1"/>
+              <connect from_op="IF HAS CREDENTIALS" from_port="input 2" to_op="Token Macro" to_port="example set"/>
+              <connect from_op="Token Macro" from_port="example set" to_op="Write Tokens" to_port="input"/>
+              <portSpacing port="source_in 1" spacing="0"/>
+              <portSpacing port="sink_out 1" spacing="0"/>
+              <portSpacing port="sink_out 2" spacing="0"/>
+            </process>
+          </operator>
+          <operator activated="true" class="concurrency:loop" compatibility="9.10.007" expanded="true" height="145" name="Process Consumptions" width="90" x="246" y="34">
+            <parameter key="number_of_iterations" value="%{i}"/>
+            <parameter key="iteration_macro" value="i"/>
+            <parameter key="reuse_results" value="false"/>
+            <parameter key="enable_parallel_execution" value="true"/>
+            <process expanded="true">
+              <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="User ID Macro" width="90" x="246" y="646">
+                <parameter key="macro" value="id"/>
+                <parameter key="macro_type" value="data_value"/>
+                <parameter key="statistics" value="average"/>
+                <parameter key="attribute_name" value="user_id"/>
+                <parameter key="example_index" value="1"/>
+                <list key="additional_macros">
+                  <parameter key="consumption_id" value="consumption_id"/>
+                </list>
+              </operator>
+              <operator activated="true" class="subprocess" compatibility="9.10.007" expanded="true" height="82" name="Testing Dataset B" width="90" x="514" y="646">
+                <process expanded="true">
+                  <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="Row (2)" width="90" x="380" y="136">
+                    <parameter key="generator_type" value="attribute functions"/>
+                    <parameter key="number_of_examples" value="1"/>
+                    <parameter key="use_stepsize" value="false"/>
+                    <list key="function_descriptions">
+                      <parameter key="time" value="0"/>
+                      <parameter key="consumption" value="0"/>
+                      <parameter key="weekend" value="&quot;&quot;"/>
+                      <parameter key="day_week" value="&quot;&quot;"/>
+                      <parameter key="season" value="&quot;&quot;"/>
+                      <parameter key="consumption_variance" value="0"/>
+                    </list>
+                    <parameter key="add_id_attribute" value="false"/>
+                    <list key="numeric_series_configuration"/>
+                    <list key="date_series_configuration"/>
+                    <list key="date_series_configuration (interval)"/>
+                    <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="column_separator" value=","/>
+                    <parameter key="parse_all_as_nominal" value="false"/>
+                    <parameter key="decimal_point_character" value="."/>
+                    <parameter key="trim_attribute_names" value="true"/>
+                  </operator>
+                  <operator activated="true" class="execute_script" compatibility="9.10.007" expanded="true" height="103" name="Extract Row" width="90" x="581" y="34">
+                    <parameter key="script" value="rows = input[0]&#10;rowModel = input[1]&#10;&#10;rowToExtract = rows.getExample(%{i} - 1)&#10;row = rowModel.getExample(0)&#10;&#10;row['time'] = rowToExtract['time']&#10;row['weekend'] = rowToExtract['weekend']&#10;row['day_week'] = rowToExtract['day_week']&#10;row['season'] = rowToExtract['season']&#10;row['consumption'] = rowToExtract['consumption']&#10;row['consumption_variance'] = rowToExtract['consumption_variance']&#10;&#10;return rowModel;"/>
+                    <parameter key="standard_imports" value="true"/>
+                  </operator>
+                  <connect from_port="in 1" to_op="Extract Row" to_port="input 1"/>
+                  <connect from_op="Row (2)" from_port="output" to_op="Extract Row" to_port="input 2"/>
+                  <connect from_op="Extract Row" from_port="output 1" to_port="out 1"/>
+                  <portSpacing port="source_in 1" spacing="0"/>
+                  <portSpacing port="source_in 2" spacing="0"/>
+                  <portSpacing port="sink_out 1" spacing="0"/>
+                  <portSpacing port="sink_out 2" spacing="0"/>
+                </process>
+              </operator>
+              <operator activated="true" class="jdbc_connectors:read_database" compatibility="9.10.007" expanded="true" height="82" name="Dataset B" width="90" x="246" y="493">
+                <parameter key="define_connection" value="repository"/>
+                <parameter key="connection_entry" value="/Connections/DB"/>
+                <parameter key="database_system" value="MySQL"/>
+                <parameter key="define_query" value="query"/>
+                <parameter key="query" value="SELECT *&#10;FROM `consumptions`&#10;WHERE user_id = %{id}&#10;AND id &lt; %{consumption_id}"/>
+                <parameter key="use_default_schema" value="true"/>
+                <parameter key="prepare_statement" value="false"/>
+                <enumeration key="parameters"/>
+                <parameter key="datamanagement" value="double_array"/>
+                <parameter key="data_management" value="auto"/>
+              </operator>
+              <operator activated="true" class="subprocess" compatibility="9.10.007" expanded="true" height="82" name="Transform B" width="90" x="380" y="493">
+                <process expanded="true">
+                  <operator activated="true" class="date_to_nominal" compatibility="9.10.007" expanded="true" height="82" name="Date to Nominal (2)" width="90" x="380" y="34">
+                    <parameter key="attribute_name" value="created_at"/>
+                    <parameter key="date_format" value="F HH:mm DDD"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="locale" value="Portuguese (Portugal)"/>
+                    <parameter key="keep_old_attribute" value="false"/>
+                  </operator>
+                  <operator activated="true" class="generate_attributes" compatibility="9.10.007" expanded="true" height="82" name="Generate Attributes (2)" width="90" x="514" y="34">
+                    <list key="function_descriptions">
+                      <parameter key="time" value="parse(cut(created_at, 2, 2)) + (parse(cut(created_at, 5, 2)) / 60)"/>
+                      <parameter key="consumption" value="value"/>
+                      <parameter key="weekend" value="if (parse(cut(created_at, 0, 1)) == 0 || parse(cut(created_at, 0, 1)) == 6, &quot;Yes&quot;, &quot;No&quot;)"/>
+                      <parameter key="day_week" value="if (parse(cut(created_at, 0, 1)) == 0, &quot;Sunday&quot;, if (parse(cut(created_at, 0, 1)) == 1, &quot;Monday&quot;, if (parse(cut(created_at, 0, 1)) == 2, &quot;Tuesday&quot;, if (parse(cut(created_at, 0, 1)) == 3, &quot;Wednesday&quot;, if (parse(cut(created_at, 0, 1)) == 4, &quot;Thursday&quot;, if (parse(cut(created_at, 0, 1)) == 5, &quot;Friday&quot;, &quot;Saturday&quot;))))))"/>
+                      <parameter key="season" value="if (parse(cut(created_at, 8, 3)) &lt; 79, &quot;Winter&quot;, if (parse(cut(created_at, 8, 3)) &lt; 172, &quot;Spring&quot;, if (parse(cut(created_at, 8, 3)) &lt; 266, &quot;Summer&quot;, if (parse(cut(created_at, 8, 3)) &lt; 355, &quot;Autumn&quot;, &quot;Winter&quot;))))"/>
+                      <parameter key="consumption_variance" value="variance"/>
+                    </list>
+                    <parameter key="keep_all" value="false"/>
+                  </operator>
+                  <operator activated="true" class="set_role" compatibility="9.10.007" expanded="true" height="82" name="Set Role (2)" width="90" x="648" y="34">
+                    <parameter key="attribute_name" value="consumption"/>
+                    <parameter key="target_role" value="label"/>
+                    <list key="set_additional_roles"/>
+                  </operator>
+                  <connect from_port="in 1" to_op="Date to Nominal (2)" to_port="example set input"/>
+                  <connect from_op="Date to Nominal (2)" from_port="example set output" to_op="Generate Attributes (2)" to_port="example set input"/>
+                  <connect from_op="Generate Attributes (2)" from_port="example set output" to_op="Set Role (2)" to_port="example set input"/>
+                  <connect from_op="Set Role (2)" from_port="example set output" to_port="out 1"/>
+                  <portSpacing port="source_in 1" spacing="0"/>
+                  <portSpacing port="source_in 2" spacing="0"/>
+                  <portSpacing port="sink_out 1" spacing="0"/>
+                  <portSpacing port="sink_out 2" spacing="0"/>
+                </process>
+              </operator>
+              <operator activated="true" class="extract_macro" compatibility="9.10.007" expanded="true" height="68" name="Count Training Rows B" width="90" x="514" y="493">
+                <parameter key="macro" value="rows_training"/>
+                <parameter key="macro_type" value="number_of_examples"/>
+                <parameter key="statistics" value="average"/>
+                <parameter key="attribute_name" value=""/>
+                <list key="additional_macros"/>
+              </operator>
+              <operator activated="true" class="branch" compatibility="9.10.007" expanded="true" height="124" name="IF TRANING_ROWS &gt; 0" width="90" x="782" y="544">
+                <parameter key="condition_type" value="expression"/>
+                <parameter key="expression" value="eval(%{rows_training}) &gt; 0"/>
+                <parameter key="io_object" value="ANOVAMatrix"/>
+                <parameter key="return_inner_output" value="true"/>
+                <process expanded="true">
+                  <operator activated="true" class="subprocess" compatibility="9.10.007" expanded="true" height="124" name="Process Row" width="90" x="246" y="34">
+                    <process expanded="true">
+                      <operator activated="true" class="k_nn" compatibility="9.10.007" expanded="true" height="82" name="k-NN" width="90" x="112" y="34">
+                        <parameter key="k" value="2"/>
+                        <parameter key="weighted_vote" value="true"/>
+                        <parameter key="measure_types" value="MixedMeasures"/>
+                        <parameter key="mixed_measure" value="MixedEuclideanDistance"/>
+                        <parameter key="nominal_measure" value="NominalDistance"/>
+                        <parameter key="numerical_measure" value="EuclideanDistance"/>
+                        <parameter key="divergence" value="GeneralizedIDivergence"/>
+                        <parameter key="kernel_type" value="radial"/>
+                        <parameter key="kernel_gamma" value="1.0"/>
+                        <parameter key="kernel_sigma1" value="1.0"/>
+                        <parameter key="kernel_sigma2" value="0.0"/>
+                        <parameter key="kernel_sigma3" value="2.0"/>
+                        <parameter key="kernel_degree" value="3.0"/>
+                        <parameter key="kernel_shift" value="1.0"/>
+                        <parameter key="kernel_a" value="1.0"/>
+                        <parameter key="kernel_b" value="0.0"/>
+                      </operator>
+                      <operator activated="true" class="apply_model" compatibility="9.10.007" expanded="true" height="82" name="Apply Model (2)" width="90" x="313" y="34">
+                        <list key="application_parameters"/>
+                        <parameter key="create_view" value="false"/>
+                      </operator>
+                      <operator activated="true" class="multiply" compatibility="9.10.007" expanded="true" height="82" name="Multiply (2)" width="90" x="648" y="136"/>
+                      <operator activated="true" class="select_attributes" compatibility="9.10.007" expanded="true" height="82" name="Select Attributes (3)" width="90" x="849" y="136">
+                        <parameter key="attribute_filter_type" value="subset"/>
+                        <parameter key="attribute" value=""/>
+                        <parameter key="attributes" value="day_week|season|time|weekend|consumption"/>
+                        <parameter key="use_except_expression" value="false"/>
+                        <parameter key="value_type" value="attribute_value"/>
+                        <parameter key="use_value_type_exception" value="false"/>
+                        <parameter key="except_value_type" value="time"/>
+                        <parameter key="block_type" value="attribute_block"/>
+                        <parameter key="use_block_type_exception" value="false"/>
+                        <parameter key="except_block_type" value="value_matrix_row_start"/>
+                        <parameter key="invert_selection" value="false"/>
+                        <parameter key="include_special_attributes" value="false"/>
+                      </operator>
+                      <connect from_port="in 1" to_op="k-NN" to_port="training set"/>
+                      <connect from_port="in 2" to_op="Apply Model (2)" to_port="unlabelled data"/>
+                      <connect from_op="k-NN" from_port="model" to_op="Apply Model (2)" to_port="model"/>
+                      <connect from_op="Apply Model (2)" from_port="labelled data" to_op="Multiply (2)" to_port="input"/>
+                      <connect from_op="Apply Model (2)" from_port="model" to_port="out 2"/>
+                      <connect from_op="Multiply (2)" from_port="output 1" to_op="Select Attributes (3)" to_port="example set input"/>
+                      <connect from_op="Select Attributes (3)" from_port="example set output" to_port="out 1"/>
+                      <portSpacing port="source_in 1" spacing="0"/>
+                      <portSpacing port="source_in 2" spacing="0"/>
+                      <portSpacing port="source_in 3" spacing="0"/>
+                      <portSpacing port="sink_out 1" spacing="0"/>
+                      <portSpacing port="sink_out 2" spacing="0"/>
+                      <portSpacing port="sink_out 3" spacing="0"/>
+                      <portSpacing port="sink_out 4" spacing="0"/>
+                    </process>
+                  </operator>
+                  <connect from_port="input 1" to_op="Process Row" to_port="in 1"/>
+                  <connect from_port="input 2" to_op="Process Row" to_port="in 2"/>
+                  <connect from_op="Process Row" from_port="out 1" to_port="input 1"/>
+                  <connect from_op="Process Row" from_port="out 2" to_port="input 2"/>
+                  <connect from_op="Process Row" from_port="out 3" to_port="input 3"/>
+                  <portSpacing port="source_condition" spacing="0"/>
+                  <portSpacing port="source_input 1" spacing="0"/>
+                  <portSpacing port="source_input 2" spacing="0"/>
+                  <portSpacing port="source_input 3" spacing="0"/>
+                  <portSpacing port="sink_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 2" spacing="0"/>
+                  <portSpacing port="sink_input 3" spacing="0"/>
+                  <portSpacing port="sink_input 4" spacing="0"/>
+                </process>
+                <process expanded="true">
+                  <portSpacing port="source_condition" spacing="0"/>
+                  <portSpacing port="source_input 1" spacing="0"/>
+                  <portSpacing port="source_input 2" spacing="0"/>
+                  <portSpacing port="source_input 3" spacing="0"/>
+                  <portSpacing port="sink_input 1" spacing="0"/>
+                  <portSpacing port="sink_input 2" spacing="0"/>
+                  <portSpacing port="sink_input 3" spacing="0"/>
+                  <portSpacing port="sink_input 4" spacing="0"/>
+                </process>
+              </operator>
+              <operator activated="true" class="jdbc_connectors:read_database" compatibility="9.10.007" expanded="true" height="82" name="Custom examples" width="90" x="246" y="136">
+                <parameter key="define_connection" value="repository"/>
+                <parameter key="connection_entry" value="/Connections/DB"/>
+                <parameter key="database_system" value="MySQL"/>
+                <parameter key="define_query" value="query"/>
+                <parameter key="query" value="SELECT UNIX_TIMESTAMP(t.time) AS &quot;timestamp&quot;, t.consumption AS &quot;power&quot;, t.equipment_id as &quot;id&quot;, t.equipment_consumption as &quot;app_power&quot;, e.name as &quot;name&quot;&#10;FROM `training_examples` t JOIN equipments e ON t.equipment_id = e.id &#10;WHERE e.user_id = %{id};"/>
+                <parameter key="use_default_schema" value="true"/>
+                <parameter key="prepare_statement" value="false"/>
+                <enumeration key="parameters"/>
+                <parameter key="datamanagement" value="double_array"/>
+                <parameter key="data_management" value="auto"/>
+              </operator>
+              <operator activated="true" class="jdbc_connectors:read_database" compatibility="9.10.007" expanded="true" height="82" name="Equipments" width="90" x="246" y="289">
+                <parameter key="define_connection" value="repository"/>
+                <parameter key="connection_entry" value="/Connections/DB"/>
+                <parameter key="database_system" value="MySQL"/>
+                <parameter key="define_query" value="query"/>
+                <parameter key="query" value="SELECT DISTINCT e.name,e.id FROM equipments e JOIN training_examples t ON t.equipment_id = e.id WHERE e.user_id = %{id};"/>
+                <parameter key="use_default_schema" value="true"/>
+                <parameter key="prepare_statement" value="false"/>
+                <enumeration key="parameters"/>
+                <parameter key="datamanagement" value="double_array"/>
+                <parameter key="data_management" value="auto"/>
+              </operator>
+              <operator activated="true" class="execute_script" compatibility="9.10.007" expanded="true" height="103" name="Execute Script" width="90" x="447" y="187">
+                <parameter key="script" value="import com.rapidminer.tools.Ontology;&#10;import com.rapidminer.tools.LogService;&#10;import java.util.logging.Level;&#10;import java.text.DecimalFormat;&#10;&#10;&#10;&#10;def df = new DecimalFormat(&quot;#0.00&quot;)&#10;&#10;ExampleSet dataset = input[0];&#10;ExampleSet equipments = input[1];&#10;&#10;//Map Appliance ID =&gt; Attribute ID&#10;def map = [:];&#10;Attribute[] attributes = new Attribute[equipments.size() + 2];&#10;attributes[0] = AttributeFactory.createAttribute(&quot;timestamp&quot;, Ontology.NOMINAL);&#10;attributes[1] = AttributeFactory.createAttribute(&quot;power&quot;, Ontology.NOMINAL);&#10;for (int i = 2; i &lt; attributes.size(); i++) {&#10;&#9;int applianceID = equipments.getExample(i - 2)[&quot;id&quot;];&#10;&#9;//String applianceName = equipments.getExample(i - 2)[&quot;name&quot;];&#10;&#10;&#9;attributes[i] = AttributeFactory.createAttribute(&quot;appliance&quot; + applianceID, Ontology.NOMINAL);&#10;&#9;def imap = [(applianceID as int): i];&#10;&#9;map.putAll(imap);&#10;}&#10;&#10;//Create ExampleTable&#10;MemoryExampleTable dataTable = new MemoryExampleTable(attributes);&#10;DataRowFactory ROW_FACTORY = new DataRowFactory(0);&#10;&#10;//Add rows&#10;long lastTimestamp = dataset.size() &gt; 0 ? dataset.getExample(0)[&quot;timestamp&quot;] as long: 0;&#10;&#10;for (int i = 0; i &lt; dataset.size(); i++) {&#10;&#9;currRow = dataset.getExample(i);&#10;&#9;&#10;&#9;String[] dataArray = new String[attributes.size()];&#10;&#10;&#9;//Initialize Array&#10;&#9;&#10;&#9;for (int k = 0; k &lt; dataArray.size(); k++) {&#10;&#9;&#9;dataArray[k] = &quot;0&quot;;&#10;&#9;}&#10;&#9;&#10;&#10;&#9;dataArray[0] = String.format(&quot;%.0f&quot;, currRow[&quot;timestamp&quot;]); //timestamp&#10;&#9;dataArray[1] = currRow[&quot;power&quot;].toString();                 //power&#10;&#9;&#10;&#9;for (int j = i; j &lt; dataset.size(); j++) {&#10;&#9;&#9;if(j == dataset.size()-1){&#10;&#9;&#9;&#9;i = j;&#9;&#10;&#9;&#9;}&#10;&#9;&#9;&#10;&#9;&#9;targetRow = dataset.getExample(j);&#10;&#9;&#9;if (targetRow[&quot;timestamp&quot;] != lastTimestamp) {&#10;&#9;&#9;&#9;lastTimestamp = targetRow[&quot;timestamp&quot;];&#10;&#9;&#9;&#9;i = j-1;&#10;&#9;&#9;&#9;break;&#10;&#9;&#9;}&#10;&#9;&#9;int pos = map[targetRow[&quot;id&quot;] as int];&#10;&#9;&#9;if(targetRow[&quot;app_power&quot;] != 0){&#10;&#9;&#9;&#9;dataArray[pos] = targetRow[&quot;app_power&quot;].toString();    //appliance_power&#10;&#9;&#9;}&#10;&#9;}&#10;&#9;&#10;&#9;DataRow row = ROW_FACTORY.create(dataArray, attributes);&#10;&#9;dataTable.addDataRow(row);&#10;&#10;&#9;//Data Augmentation&#10;&#9;Random random = new Random()&#10;    &#9;Double timestamp = 0&#10;    &#9;for (int j = 0; j &lt; 99; j++) {&#10;        int increment = random.nextInt() % 10&#10;&#10;        timestamp = Double.parseDouble(dataArray[0]) - random.nextInt() % 3600 - j * 3600&#10;        dataArray[0] = timestamp.toString()&#10;&#10;        for (int k = 1; k &lt; dataArray.size(); k++) {&#10;            if (Double.parseDouble(dataArray[k]) &gt; 0) {&#10;                Double value = Double.parseDouble(dataArray[k]) + increment&#10;                value = value &lt; 0 ? 0 : value&#10;                dataArray[k] = value.toString()&#10;            }&#10;        }&#10;&#10;        row = ROW_FACTORY.create(dataArray, attributes);&#10;        dataTable.addDataRow(row);&#10;    }&#10;}&#10;&#10;return dataTable.createExampleSet();"/>
+                <parameter key="standard_imports" value="true"/>
+              </operator>
+              <operator activated="true" class="parse_numbers" compatibility="9.10.007" expanded="true" height="82" name="Parse Numbers" width="90" x="581" y="187">
+                <parameter key="attribute_filter_type" value="all"/>
+                <parameter key="attribute" value=""/>
+                <parameter key="attributes" value=""/>
+                <parameter key="use_except_expression" value="false"/>
+                <parameter key="value_type" value="nominal"/>
+                <parameter key="use_value_type_exception" value="false"/>
+                <parameter key="except_value_type" value="file_path"/>
+                <parameter key="block_type" value="single_value"/>
+                <parameter key="use_block_type_exception" value="false"/>
+                <parameter key="except_block_type" value="single_value"/>
+                <parameter key="invert_selection" value="false"/>
+                <parameter key="include_special_attributes" value="false"/>
+                <parameter key="decimal_character" value="."/>
+                <parameter key="grouped_digits" value="false"/>
+                <parameter key="grouping_character" value=","/>
+                <parameter key="infinity_representation" value=""/>
+                <parameter key="unparsable_value_handling" value="fail"/>
+              </operator>
+              <operator activated="true" class="subprocess" compatibility="9.10.007" expanded="true" height="82" name="Subprocess" width="90" x="782" y="187">
+                <process expanded="true">
+                  <operator activated="true" class="utility:create_exampleset" compatibility="9.10.007" expanded="true" height="68" name="API INFO" width="90" x="246" y="238">
+                    <parameter key="generator_type" value="attribute functions"/>
+                    <parameter key="number_of_examples" value="1"/>
+                    <parameter key="use_stepsize" value="false"/>
+                    <list key="function_descriptions">
+                      <parameter key="access_token" value="%{token}"/>
+                      <parameter key="url" value="%{url}"/>
+                      <parameter key="user_id" value="%{id}"/>
+                    </list>
+                    <parameter key="add_id_attribute" value="false"/>
+                    <list key="numeric_series_configuration"/>
+                    <list key="date_series_configuration"/>
+                    <list key="date_series_configuration (interval)"/>
+                    <parameter key="date_format" value="yyyy-MM-dd HH:mm:ss"/>
+                    <parameter key="time_zone" value="SYSTEM"/>
+                    <parameter key="column_separator" value=","/>
+                    <parameter key="parse_all_as_nominal" value="false"/>
+                    <parameter key="decimal_point_character" value="."/>
+                    <parameter key="trim_attribute_names" value="true"/>
+                  </operator>
+                  <operator activated="true" class="jdbc_connectors:read_database" compatibility="9.10.007" expanded="true" height="82" name="Dataset A" width="90" x="112" y="136">
+                    <parameter key="define_connection" value="repository"/>
+                    <parameter key="connection_entry" value="/Connections/DB"/>
+                    <parameter key="database_system" value="MySQL"/>
+                    <parameter key="define_query" value="query"/>
+                    <parameter key="query" value="SELECT id,UNIX_TIMESTAMP(created_at) as timestamp, `value` as power, user_id&#10;FROM `consumptions`&#10;WHERE user_id = %{id} AND observation_id IS NULL&#10;"/>
+                    <parameter key="use_default_schema" value="true"/>
+                    <parameter key="prepare_statement" value="false"/>
+                    <enumeration key="parameters"/>
+                    <parameter key="datamanagement" value="double_array"/>
+                    <parameter key="data_management" value="auto"/>
+                  </operator>
+                  <operator activated="true" class="select_attributes" compatibility="9.10.007" expanded="true" height="82" name="Select Attributes" width="90" x="246" y="136">
+                    <parameter key="attribute_filter_type" value="subset"/>
+                    <parameter key="attribute" value=""/>
+                    <parameter key="attributes" value="power|timestamp"/>
+                    <parameter key="use_except_expression" value="false"/>
+                    <parameter key="value_type" value="attribute_value"/>
+                    <parameter key="use_value_type_exception" value="false"/>
+                    <parameter key="except_value_type" value="time"/>
+                    <parameter key="block_type" value="attribute_block"/>
+                    <parameter key="use_block_type_exception" value="false"/>
+                    <parameter key="except_block_type" value="value_matrix_row_start"/>
+                    <parameter key="invert_selection" value="false"/>
+                    <parameter key="include_special_attributes" value="false"/>
+                  </operator>
+                  <operator activated="true" class="python_scripting:execute_python" compatibility="9.10.002" expanded="true" height="166" name="Execute Python (2)" width="90" x="514" y="34">
+                    <parameter key="script" value="import pandas&#10;&#10;# rm_main is a mandatory function, &#10;# the number of arguments has to be the number of input ports (can be none),&#10;#     or the number of input ports plus one if &quot;use macros&quot; parameter is set&#10;# if you want to use macros, use this instead and check &quot;use macros&quot; parameter:&#10;#def rm_main(data,macros):&#10;def rm_main(data):&#10;    print('Hello, world!')&#10;    # output can be found in Log View&#10;    print(type(data))&#10;&#10;    #your code goes here&#10;&#10;    #for example:&#10;    data2 = pandas.DataFrame([3,5,77,8])&#10;&#10;    # connect 2 output ports to see the results&#10;    return data, data2"/>
+                    <parameter key="script_file" value="D:/GitRepository/SEM/Rapidminer/Local Repository/processes/project/SLD/sld_rp.py"/>
+                    <parameter key="notebook_cell_tag_filter" value=""/>
+                    <parameter key="use_default_python" value="false"/>
+                    <parameter key="package_manager" value="conda (anaconda)"/>
+                    <parameter key="conda_environment" value="test"/>
+                    <parameter key="use_macros" value="false"/>
+                  </operator>
+                  <connect from_port="in 1" to_op="Execute Python (2)" to_port="input 1"/>
+                  <connect from_op="API INFO" from_port="output" to_op="Execute Python (2)" to_port="input 4"/>
+                  <connect from_op="Dataset A" from_port="output" to_op="Select Attributes" to_port="example set input"/>
+                  <connect from_op="Select Attributes" from_port="example set output" to_op="Execute Python (2)" to_port="input 2"/>
+                  <connect from_op="Select Attributes" from_port="original" to_op="Execute Python (2)" to_port="input 3"/>
+                  <connect from_op="Execute Python (2)" from_port="output 1" to_port="out 1"/>
+                  <portSpacing port="source_in 1" spacing="0"/>
+                  <portSpacing port="source_in 2" spacing="0"/>
+                  <portSpacing port="sink_out 1" spacing="0"/>
+                  <portSpacing port="sink_out 2" spacing="0"/>
+                </process>
+              </operator>
+              <connect from_port="input 1" to_op="User ID Macro" to_port="example set"/>
+              <connect from_op="User ID Macro" from_port="example set" to_op="Testing Dataset B" to_port="in 1"/>
+              <connect from_op="Testing Dataset B" from_port="out 1" to_op="IF TRANING_ROWS &gt; 0" to_port="input 2"/>
+              <connect from_op="Dataset B" from_port="output" to_op="Transform B" to_port="in 1"/>
+              <connect from_op="Transform B" from_port="out 1" to_op="Count Training Rows B" to_port="example set"/>
+              <connect from_op="Count Training Rows B" from_port="example set" to_op="IF TRANING_ROWS &gt; 0" to_port="input 1"/>
+              <connect from_op="IF TRANING_ROWS &gt; 0" from_port="input 1" to_port="output 2"/>
+              <connect from_op="IF TRANING_ROWS &gt; 0" from_port="input 2" to_port="output 3"/>
+              <connect from_op="IF TRANING_ROWS &gt; 0" from_port="input 3" to_port="output 4"/>
+              <connect from_op="Custom examples" from_port="output" to_op="Execute Script" to_port="input 1"/>
+              <connect from_op="Equipments" from_port="output" to_op="Execute Script" to_port="input 2"/>
+              <connect from_op="Execute Script" from_port="output 1" to_op="Parse Numbers" to_port="example set input"/>
+              <connect from_op="Parse Numbers" from_port="example set output" to_op="Subprocess" to_port="in 1"/>
+              <connect from_op="Subprocess" from_port="out 1" to_port="output 1"/>
+              <portSpacing port="source_input 1" spacing="0"/>
+              <portSpacing port="source_input 2" spacing="0"/>
+              <portSpacing port="sink_output 1" spacing="0"/>
+              <portSpacing port="sink_output 2" spacing="0"/>
+              <portSpacing port="sink_output 3" spacing="0"/>
+              <portSpacing port="sink_output 4" spacing="0"/>
+              <portSpacing port="sink_output 5" spacing="0"/>
+              <description align="center" color="gray" colored="true" height="50" resized="true" width="739" x="203" y="48">Equipment Status Prediction (A)</description>
+              <description align="center" color="yellow" colored="false" height="290" resized="true" width="306" x="397" y="99">Create dataset</description>
+              <description align="center" color="green" colored="true" height="139" resized="true" width="189" x="203" y="100">Train Data</description>
+              <description align="center" color="gray" colored="true" height="52" resized="true" width="745" x="200" y="396">Consumption Prediction (B)</description>
+              <description align="center" color="yellow" colored="false" height="144" resized="true" width="506" x="199" y="454">Train Data</description>
+              <description align="center" color="green" colored="true" height="146" resized="true" width="508" x="200" y="605">Test Data</description>
+              <description align="center" color="green" colored="true" height="146" resized="true" width="192" x="202" y="243">User Equipments&lt;br&gt;</description>
+              <description align="center" color="yellow" colored="false" height="287" resized="true" width="235" x="709" y="102">SLD&lt;br&gt;</description>
+              <description align="center" color="purple" colored="true" height="297" resized="true" width="232" x="711" y="454"/>
+            </process>
+          </operator>
+          <connect from_port="input 1" to_op="Process Consumptions" to_port="input 1"/>
+          <connect from_op="Authentication" from_port="out 1" to_port="input 5"/>
+          <connect from_op="Process Consumptions" from_port="output 1" to_port="input 1"/>
+          <connect from_op="Process Consumptions" from_port="output 2" to_port="input 2"/>
+          <connect from_op="Process Consumptions" from_port="output 3" to_port="input 3"/>
+          <connect from_op="Process Consumptions" from_port="output 4" to_port="input 4"/>
+          <portSpacing port="source_condition" spacing="0"/>
+          <portSpacing port="source_input 1" spacing="0"/>
+          <portSpacing port="source_input 2" spacing="0"/>
+          <portSpacing port="sink_input 1" spacing="0"/>
+          <portSpacing port="sink_input 2" spacing="0"/>
+          <portSpacing port="sink_input 3" spacing="0"/>
+          <portSpacing port="sink_input 4" spacing="0"/>
+          <portSpacing port="sink_input 5" spacing="0"/>
+          <portSpacing port="sink_input 6" spacing="0"/>
+        </process>
+        <process expanded="true">
+          <portSpacing port="source_condition" spacing="0"/>
+          <portSpacing port="source_input 1" spacing="0"/>
+          <portSpacing port="source_input 2" spacing="0"/>
+          <portSpacing port="sink_input 1" spacing="0"/>
+          <portSpacing port="sink_input 2" spacing="0"/>
+          <portSpacing port="sink_input 3" spacing="0"/>
+          <portSpacing port="sink_input 4" spacing="0"/>
+          <portSpacing port="sink_input 5" spacing="0"/>
+          <portSpacing port="sink_input 6" spacing="0"/>
+        </process>
+      </operator>
+      <connect from_op="Consumptions" from_port="output" to_op="Date to Nominal" to_port="example set input"/>
+      <connect from_op="Date to Nominal" from_port="example set output" to_op="Generate Attributes" to_port="example set input"/>
+      <connect from_op="Generate Attributes" from_port="example set output" to_op="Count Consumptions" to_port="example set"/>
+      <connect from_op="Count Consumptions" from_port="example set" to_op="IF ROWS &gt; 0" to_port="input 1"/>
+      <connect from_op="IF ROWS &gt; 0" from_port="input 1" to_port="result 1"/>
+      <connect from_op="IF ROWS &gt; 0" from_port="input 2" to_port="result 2"/>
+      <connect from_op="IF ROWS &gt; 0" from_port="input 3" to_port="result 3"/>
+      <connect from_op="IF ROWS &gt; 0" from_port="input 4" to_port="result 4"/>
+      <portSpacing port="source_input 1" spacing="0"/>
+      <portSpacing port="sink_result 1" spacing="0"/>
+      <portSpacing port="sink_result 2" spacing="0"/>
+      <portSpacing port="sink_result 3" spacing="0"/>
+      <portSpacing port="sink_result 4" spacing="0"/>
+      <portSpacing port="sink_result 5" spacing="0"/>
+      <description align="center" color="red" colored="true" height="142" resized="true" width="396" x="96" y="95">Consumptions without Observation</description>
+      <description align="center" color="red" colored="true" height="141" resized="true" width="247" x="499" y="96">Count Number of Rows</description>
+    </process>
+  </operator>
+</process>
